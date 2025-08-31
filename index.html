@@ -43,12 +43,8 @@
                 <p>공격속도: <span id="selected-unit-firerate">-</span></p>
                 <p>설명: <span id="selected-unit-description">-</span></p>
             </div>
-            <!-- New container for action buttons and upgrade panel -->
+            <!-- Container for upgrade panel and action buttons -->
             <div style="display: flex; gap: 10px;">
-                <div id="action-buttons" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
-                    <button id="sell-unit-button" style="background-color: #e74c3c; color: white; width: 80px; height: 40px;">판매</button>
-                    <button id="move-unit-button" style="background-color: #3498db; color: white; width: 80px; height: 40px;">이동</button>
-                </div>
                 <div id="upgrade-panel" class="hidden">
                     <h4>업그레이드</h4>
                     <p>스탯포인트: <span id="stat-points">0</span></p>
@@ -58,6 +54,10 @@
                         <button class="stat-button" data-stat="range">사거리 증가</button>
                         <button class="stat-button" data-stat="fireRate">연사력 증가</button>
                     </div>
+                </div>
+                <div id="action-buttons" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                    <button id="sell-unit-button" style="background-color: #e74c3c; color: white; width: 80px; height: 40px;">판매</button>
+                    <button id="move-unit-button" style="background-color: #3498db; color: white; width: 80px; height: 40px;">이동</button>
                 </div>
             </div>
             <div id="enemy-info-panel" class="hidden">
