@@ -88,6 +88,7 @@ function initGame() {
     const enemyTypeNameEl = document.getElementById('enemy-type-name');
     const enemyHealthEl = document.getElementById('enemy-health');
     const enemySpeedEl = document.getElementById('enemy-speed');
+    const enemyDescriptionEl = document.getElementById('enemy-description');
     const notificationArea = document.getElementById('notification-area');
     const bossInfoContainer = document.getElementById('boss-info-container');
     const bossNameEl = document.getElementById('boss-name');
@@ -263,7 +264,7 @@ function initGame() {
         
         // 맵별 전용 몬스터들
         'ice_spirit': { name: '얼음 정령', health: 120, speed: 1.2, color: '#3498db', reward: 7, rewardDC: 4, isIceSpirit: true },
-        'rock_golem': { name: '돌 갑옷 골렘', health: 400, speed: 0.4, color: '#34495e', reward: 12, rewardDC: 6, isHeavyTank: true, damageReduction: 20 },
+        'rock_golem': { name: '돌 갑옷 골렘', health: 260, speed: 0.4, color: '#34495e', reward: 12, rewardDC: 6, isHeavyTank: true, damageReduction: 20 },
         'regen_spider': { name: '재생 거미', health: 130, speed: 1.6, color: '#2ecc71', reward: 8, rewardDC: 5, regenRate: 3 },
         'desert_scorpion': { name: '모래전갈', health: 110, speed: 1.4, color: '#f39c12', reward: 8, rewardDC: 5, isScorpion: true },
         'heavenly_wisp': { name: '유령 날개', health: 80, speed: 2.0, color: '#ecf0f1', reward: 10, rewardDC: 6, isTransparent: true },
@@ -1559,7 +1560,10 @@ function initGame() {
         'lava_tower': LavaTower
     };
 
-    function dealDamageToEnemy(enemy, amount) {
+    function dealDamageToEnemy(enemy, amount, damageType = 'normal') {
+        if (damageType === 'explosion' && enemy.type.name === '돌 갑옷 골렘') {
+            amount *= 5;
+        }
         if (enemy.isHeavyTank) {
             amount = Math.max(0, amount - enemy.damageReduction);
         }
@@ -1636,7 +1640,7 @@ function initGame() {
                 const dy = this.y - enemy.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 if (distance < this.blastRadius) {
-                    dealDamageToEnemy(enemy, this.damage);
+                    dealDamageToEnemy(enemy, this.damage, 'explosion');
                 }
             });
         }
@@ -1973,7 +1977,7 @@ function initGame() {
         const pool = ['basic', 'speedy'];
         
         if (selectedMap === 'ice') pool.push('ice_spirit');
-        else if (selectedMap === 'mountain') pool.push('rock_golem');
+        else if (selectedMap === 'mountain' && waveNum > 3) pool.push('rock_golem');
         else if (selectedMap === 'grassland') pool.push('regen_spider');
         else if (selectedMap === 'desert') pool.push('desert_scorpion');
         else if (selectedMap === 'heaven') pool.push('heavenly_wisp');
@@ -2788,12 +2792,45 @@ function initGame() {
         }
     }
 
+    function getEnemySpecialEffectText(type) {
+        const effects = [];
+        
+        if (type.isImmuneToFreeze) effects.push("빙결 면역");
+        if (type.isHeavyTank) {
+            effects.push(`중장갑 (기본 대미지 감소 ${type.damageReduction || 0}, 폭발 대미지 5배 피해)`);
+        }
+        if (type.isTransparent) effects.push("투명 (돋보기/레이저/테슬라 타워만 공격 가능)");
+        if (type.isJumper) effects.push(`도약 (주기적으로 ${type.jumpDistance}px 점프)`);
+        if (type.regenRate > 0) effects.push(`재생 (초당 체력 ${type.regenRate} 회복)`);
+        if (type.splitsInto) {
+            const splitName = baseEnemyTypes[type.splitsInto] ? baseEnemyTypes[type.splitsInto].name : '하위 적';
+            effects.push(`분열 (사망 시 ${splitName} ${type.splitCount}마리 소환)`);
+        }
+        if (type.isHealer) effects.push(`광역 치료 (주변 아군 체력 ${type.healAmount} 회복)`);
+        if (type.isScorpion) effects.push("모래 회피 (40% 확률로 공격 회피)");
+        if (type.isIceSpirit) effects.push("얼음 정령 (화염 지속 피해 면역)");
+        if (type.stunRadius) effects.push("기절 폭발 (사망 시 주변 타워 기절)");
+        if (type.isAggro) effects.push("도발 (사거리 내 타워 타겟 고정)");
+        
+        if (type.isBoss) {
+            effects.push("보스 (빙결 면역)");
+            if (type.isIceKing) effects.push("주변 타워 빙결");
+            if (type.isMountainTitan) effects.push("광역 낙석 공격");
+            if (type.isMeadowKeeper) effects.push("광역 치유");
+            if (type.isSandstormLord) effects.push("사거리 반감 모래바람");
+            if (type.isFallenAngel) effects.push("심판의 고리 (타워 격리)");
+        }
+        
+        return effects.length > 0 ? effects.join(", ") : "없음";
+    }
+
     function updateEnemyInfoPanel(enemy) {
         if (enemy) {
             enemyInfoPanel.classList.remove('hidden');
             enemyTypeNameEl.textContent = enemy.type.name;
             enemyHealthEl.textContent = `${Math.ceil(enemy.health)} / ${enemy.maxHealth}`;
             enemySpeedEl.textContent = enemy.speed.toFixed(2);
+            enemyDescriptionEl.textContent = getEnemySpecialEffectText(enemy.type);
         } else {
             enemyInfoPanel.classList.add('hidden');
         }
