@@ -1810,8 +1810,8 @@ function initGame() {
             this.x = x;
             this.y = y;
             this.radius = radius;
-            this.life = 12;
-            this.maxLife = 12;
+            this.life = 10; // 지속 시간을 10프레임으로 조금 단축해서 더 빠르고 날카로운 베기 연출
+            this.maxLife = 10;
             this.color = color;
         }
         update() {
@@ -1819,24 +1819,32 @@ function initGame() {
         }
         draw() {
             const progress = (this.maxLife - this.life) / this.maxLife; // 0 -> 1
+            const alpha = 1 - progress;
             ctx.save();
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 4 * (1 - progress);
             
-            // 바깥으로 퍼져나가는 검기 링
+            // 타워 사거리 한계선(테두리 부근)에 고정된 크기에서 이펙트를 굵게 그리기
+            // 퍼져나가는 방식이 아니라 사거리 경계선(radius의 85% ~ 100%)에서만 휘두르는 궤적 연출
+            const currentRadius = this.radius * (0.85 + 0.15 * progress);
+            
+            // 1. 외곽을 휩쓰는 두꺼운 검기 테두리
+            ctx.strokeStyle = `rgba(192, 57, 43, ${alpha * 0.55})`;
+            ctx.lineWidth = 9 * alpha; // 두께를 9px로 대폭 강화
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius * progress, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
             ctx.stroke();
 
-            // 날카로운 칼날 궤적 (호) 그리기
-            ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
-            ctx.lineWidth = 3;
+            // 2. 날카롭고 두꺼운 칼날 회전 궤적 (주황/빨강의 선명하고 두꺼운 2개 아크 호)
+            ctx.strokeStyle = `rgba(231, 76, 60, ${alpha * 0.95})`;
+            ctx.lineWidth = 5 * alpha;
+            ctx.lineCap = 'round';
+            
+            // 엇갈려서 회전하는 느낌을 주기 위해 progress 에 비례하여 각도를 회전시켜 줌
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius * progress * 0.8, progress * Math.PI, (progress + 0.6) * Math.PI);
+            ctx.arc(this.x, this.y, currentRadius, progress * Math.PI * 2, (progress * Math.PI * 2) + Math.PI * 0.7);
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius * progress * 0.9, (progress + 1) * Math.PI, (progress + 1.6) * Math.PI);
+            ctx.arc(this.x, this.y, currentRadius * 0.95, (progress * Math.PI * 2) + Math.PI, (progress * Math.PI * 2) + Math.PI * 1.7);
             ctx.stroke();
 
             ctx.restore();
@@ -1974,18 +1982,33 @@ function initGame() {
 
         const comp = [];
         const size = 4 + Math.floor(waveNum * 0.8);
-        const pool = ['basic', 'speedy'];
         
-        if (selectedMap === 'ice') pool.push('ice_spirit');
-        else if (selectedMap === 'mountain' && waveNum > 3) pool.push('rock_golem');
-        else if (selectedMap === 'grassland') pool.push('regen_spider');
-        else if (selectedMap === 'desert') pool.push('desert_scorpion');
-        else if (selectedMap === 'heaven') pool.push('heavenly_wisp');
+        // 1, 2웨이브는 무조건 가장 기본적인 적만 등장하여 유저의 골드 획득 및 빌드업 확보 지원
+        const pool = ['basic'];
+        
+        // 3웨이브부터 빠른 속도의 스피디 유닛 등장
+        if (waveNum > 2) pool.push('speedy');
+        
+        // 4웨이브부터 각 맵 고유의 특색 있는 적들 등장
+        if (waveNum > 3) {
+            if (selectedMap === 'ice') pool.push('ice_spirit');
+            else if (selectedMap === 'mountain') pool.push('rock_golem');
+            else if (selectedMap === 'grassland') pool.push('regen_spider');
+            else if (selectedMap === 'desert') pool.push('desert_scorpion');
+            else if (selectedMap === 'heaven') pool.push('heavenly_wisp');
+        }
 
-        if (waveNum > 2) pool.push('tank');
-        if (waveNum > 6) pool.push('stunner', 'transparent');
-        if (waveNum > 9) pool.push('jumper', 'regenerator');
-        if (waveNum > 12) pool.push('splitter', 'healer', 'aggro');
+        // 6웨이브부터 단단한 탱커 적 등장
+        if (waveNum > 5) pool.push('tank');
+        
+        // 8웨이브부터 기절 스킬 및 투명 속성을 가진 까다로운 적 등장
+        if (waveNum > 7) pool.push('stunner', 'transparent');
+        
+        // 11웨이브부터 도약 및 회복 능력이 있는 까다로운 적 등장
+        if (waveNum > 10) pool.push('jumper', 'regenerator');
+        
+        // 14웨이브부터 분열, 광역치료, 어그로 강제 등의 최고 난이도 적 등장
+        if (waveNum > 13) pool.push('splitter', 'healer', 'aggro');
 
         for (let i = 0; i < size; i++) {
             comp.push(pool[Math.floor((i * 11 + waveNum * 5) % pool.length)]);
