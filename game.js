@@ -205,8 +205,12 @@ function initGame() {
     // 맵 경로 정의
     const maps = {
         grassland: [ 
-            { x: 0, y: tileSize * 6 + tileSize / 2 },
-            { x: mapWidth, y: tileSize * 6 + tileSize / 2 }
+            { x: 0, y: tileSize * 3 + tileSize / 2 },
+            { x: mapWidth / 3, y: tileSize * 3 + tileSize / 2 },
+            { x: mapWidth / 3, y: mapHeight - tileSize * 3 + tileSize / 2 },
+            { x: (mapWidth * 2) / 3, y: mapHeight - tileSize * 3 + tileSize / 2 },
+            { x: (mapWidth * 2) / 3, y: tileSize * 4 + tileSize / 2 },
+            { x: mapWidth, y: tileSize * 4 + tileSize / 2 }
         ],
         mountain: [ 
             { x: tileSize * 2 + tileSize / 2, y: 0 },
@@ -1962,6 +1966,7 @@ function initGame() {
     // ==================== WAVE MANAGEMENT ====================
 
     function getWaveComposition(waveNum) {
+        // 맵별 보스 이름 설정
         let bossType = 'boss_hunter';
         if (selectedMap === 'ice') bossType = 'boss_ice_king';
         else if (selectedMap === 'mountain') bossType = 'boss_mountain_titan';
@@ -1969,50 +1974,53 @@ function initGame() {
         else if (selectedMap === 'desert') bossType = 'boss_sandstorm_lord';
         else if (selectedMap === 'heaven') bossType = 'boss_fallen_angel';
 
-        if (waveNum % 5 === 0) {
-            if (waveNum === 5) return [bossType, 'basic', 'basic'];
-            if (waveNum === 10) return [bossType, 'tank', 'tank'];
-            if (waveNum === 15) return [bossType, 'speedy', 'speedy', 'tank'];
-            if (waveNum === 20) {
-                if (selectedMap === 'classic') return ['boss_hunter', 'boss_shielder', 'boss_theking'];
-                return [bossType, 'tank', 'tank', 'healer', 'aggro'];
+        // 맵별 특수 몬스터 이름 설정
+        let specialType = 'basic';
+        if (selectedMap === 'ice') specialType = 'ice_spirit';
+        else if (selectedMap === 'mountain') specialType = 'rock_golem';
+        else if (selectedMap === 'grassland') specialType = 'regen_spider';
+        else if (selectedMap === 'desert') specialType = 'desert_scorpion';
+        else if (selectedMap === 'heaven') specialType = 'heavenly_wisp';
+
+        // waveNum에 해당하는 데이터 가져오기
+        let rawComposition = null;
+        if (window.WAVE_DATA && window.WAVE_DATA[waveNum]) {
+            rawComposition = window.WAVE_DATA[waveNum];
+        }
+
+        // 만약 50웨이브를 초과하거나 데이터가 없으면, 공식에 의해 동적 생성 (무한모드 예비용)
+        if (!rawComposition) {
+            const comp = [];
+            const size = 10 + Math.floor((waveNum - 50) * 1.2); // 웨이브가 늘어날수록 마리수 급증
+            const pool = ['basic', 'speedy', 'tank', 'stunner', 'transparent', 'jumper', 'regenerator', 'splitter', 'healer', 'aggro', specialType];
+            
+            // 보스 웨이브일 경우 (5의 배수)
+            if (waveNum % 5 === 0) {
+                comp.push(bossType);
+                if (waveNum % 10 === 0) comp.push(bossType); // 10의 배수면 듀얼 보스
             }
-            return [bossType, 'tank', 'tank', 'healer', 'aggro'];
+            
+            for (let i = 0; i < size; i++) {
+                comp.push(pool[Math.floor((i * 13 + waveNum * 7) % pool.length)]);
+            }
+            return comp;
         }
 
-        const comp = [];
-        const size = 4 + Math.floor(waveNum * 0.8);
-        
-        // 1, 2웨이브는 무조건 가장 기본적인 적만 등장하여 유저의 골드 획득 및 빌드업 확보 지원
-        const pool = ['basic'];
-        
-        // 3웨이브부터 빠른 속도의 스피디 유닛 등장
-        if (waveNum > 2) pool.push('speedy');
-        
-        // 4웨이브부터 각 맵 고유의 특색 있는 적들 등장
-        if (waveNum > 3) {
-            if (selectedMap === 'ice') pool.push('ice_spirit');
-            else if (selectedMap === 'mountain') pool.push('rock_golem');
-            else if (selectedMap === 'grassland') pool.push('regen_spider');
-            else if (selectedMap === 'desert') pool.push('desert_scorpion');
-            else if (selectedMap === 'heaven') pool.push('heavenly_wisp');
-        }
+        // 'map_special'과 'boss' 키워드를 맵의 실제 몬스터와 보스로 치환
+        const comp = rawComposition.map(key => {
+            if (key === 'map_special') return specialType;
+            if (key === 'boss') {
+                // 클래식 맵의 보스는 5배수마다 다르게 구성
+                if (selectedMap === 'classic') {
+                    if (waveNum <= 5) return 'boss_hunter';
+                    if (waveNum <= 10) return 'boss_shielder';
+                    return 'boss_theking';
+                }
+                return bossType;
+            }
+            return key;
+        });
 
-        // 6웨이브부터 단단한 탱커 적 등장
-        if (waveNum > 5) pool.push('tank');
-        
-        // 8웨이브부터 기절 스킬 및 투명 속성을 가진 까다로운 적 등장
-        if (waveNum > 7) pool.push('stunner', 'transparent');
-        
-        // 11웨이브부터 도약 및 회복 능력이 있는 까다로운 적 등장
-        if (waveNum > 10) pool.push('jumper', 'regenerator');
-        
-        // 14웨이브부터 분열, 광역치료, 어그로 강제 등의 최고 난이도 적 등장
-        if (waveNum > 13) pool.push('splitter', 'healer', 'aggro');
-
-        for (let i = 0; i < size; i++) {
-            comp.push(pool[Math.floor((i * 11 + waveNum * 5) % pool.length)]);
-        }
         return comp;
     }
 
@@ -2085,6 +2093,24 @@ function initGame() {
                     cancelAnimationFrame(animationFrameId);
                 }
             }
+        }
+
+        // 50웨이브 최종 클리어 승리 조건 체크
+        if (wave === 50 && enemies.length === 0 && !waveSpawning && !isGameOver) {
+            isGameOver = true;
+            showNotification("🎉 축하합니다! 50웨이브 최종 클리어 완료! 🎉");
+            dc += 500; // 최종 승리 보너스 DC 코인 지급
+            saveSystemData();
+            dcCurrencyEl.textContent = dc;
+            
+            setTimeout(() => {
+                gameState = 'MENU';
+                cancelAnimationFrame(animationFrameId);
+                gameScreen.classList.remove('active');
+                bottomPanel.style.display = 'none';
+                menuScreen.classList.add('active');
+                updateLobbyUI();
+            }, 5000);
         }
     }
 
