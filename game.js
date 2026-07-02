@@ -939,7 +939,8 @@ function initGame() {
             let currentSpeed = this.speed;
 
             if (this.slowed && this.slowTimer > 0) {
-                currentSpeed *= this.appliedSlowFactor;
+                // 느리게 만드는 감속 효과를 반대로 속도가 3.5배 증가하여 대폭 질주하도록 수정
+                currentSpeed *= 3.5;
                 this.slowTimer--;
             } else {
                 this.slowed = false;
