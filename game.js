@@ -1076,11 +1076,11 @@ function initGame() {
                 case '초원의 파수꾼':
                     enemies.forEach(e => {
                         if (e.health > 0) {
-                            e.health = Math.min(e.maxHealth, e.health + 250);
+                            e.health = Math.min(e.maxHealth, e.health + 80);
                         }
                     });
                     showNotification('초원의 파수꾼이 대지의 기운으로 광역 치유를 시전합니다!');
-                    this.abilityCooldown = 300;
+                    this.abilityCooldown = 480; // 5초에서 8초로 늘림
                     break;
                 case '모래 폭풍 군주':
                     units.forEach(u => {
@@ -1575,6 +1575,38 @@ function initGame() {
             return;
         }
         enemy.health -= amount * globalDamageMultiplier;
+    }
+
+    function getPointAheadOnPath(enemy, jumpDist, pathNodes) {
+        let currentIdx = enemy.pathIndex;
+        let currentX = enemy.x;
+        let currentY = enemy.y;
+        let remainingDist = jumpDist;
+
+        while (remainingDist > 0 && currentIdx < pathNodes.length - 1) {
+            const nextNode = pathNodes[currentIdx + 1];
+            const dx = nextNode.x - currentX;
+            const dy = nextNode.y - currentY;
+            const segmentDist = Math.sqrt(dx * dx + dy * dy);
+
+            if (remainingDist < segmentDist) {
+                const ratio = remainingDist / segmentDist;
+                currentX += dx * ratio;
+                currentY += dy * ratio;
+                remainingDist = 0;
+            } else {
+                currentX = nextNode.x;
+                currentY = nextNode.y;
+                remainingDist -= segmentDist;
+                currentIdx++;
+            }
+        }
+
+        return {
+            x: currentX,
+            y: currentY,
+            pathIndex: currentIdx
+        };
     }
 
     // ==================== PROJECTILES ====================
